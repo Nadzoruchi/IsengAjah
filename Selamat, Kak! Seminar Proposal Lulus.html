@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Selamat, Kak! Seminar Proposal Lulus</title>
+<style>
+:root{--bg:#fdf1ee;--ink:#3b2230;--soft:#7a5566;--btn:#c2456b;--btn-ink:#fff;--card:#fffaf8;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#2a1822;--ink:#fbe7ee;--soft:#d3a8b8;--btn:#f08bab;--btn-ink:#2a1822;--card:#37202c}}
+:root[data-theme="dark"]{--bg:#2a1822;--ink:#fbe7ee;--soft:#d3a8b8;--btn:#f08bab;--btn-ink:#2a1822;--card:#37202c}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:"Fraunces",Georgia,serif;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;overflow-x:hidden}
+main{max-width:480px;position:relative;z-index:2}
+h1{font-size:clamp(2rem,8vw,3rem);line-height:1.15;margin:0 0 14px;font-weight:700}
+p{color:var(--soft);font-size:1.1rem;line-height:1.6;margin:0 0 28px}
+button{font:inherit;font-weight:600;font-size:1.05rem;background:var(--btn);color:var(--btn-ink);border:0;border-radius:999px;padding:14px 30px;cursor:pointer;transition:transform .15s}
+button:hover{transform:scale(1.04)}button:active{transform:scale(.97)}
+button:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+#gift{display:none;margin-top:28px;background:var(--card);border-radius:20px;padding:22px;border:2px dashed var(--btn)}
+#gift.show{display:block;animation:pop .5s ease}
+#gift h2{margin:0 0 8px;font-size:1.4rem}
+#gift p{margin:0;font-size:1rem}
+.flower{position:fixed;bottom:-60px;z-index:1;pointer-events:none;animation:rise linear forwards}
+@keyframes rise{to{transform:translateY(-115vh) rotate(var(--r))}}
+@keyframes pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.flower{animation-duration:.01s!important}#gift.show{animation:none}}
+#fx{position:fixed;inset:0;width:100%;height:100%;z-index:10;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="fx" aria-hidden="true"></canvas>
+<main>
+  <h1>Selamat ya, Kaks! 🎓</h1>
+  <p>Seminar proposalnya sudah berhasil dilewati. Satu langkah besar selesai, tinggal lanjut ke berikutnya.</p>
+  <button id="btn">Lihat hadiah</button>
+  <section id="gift" aria-live="polite">
+    <h2>Nih bunga 💐</h2>
+    <p>Bangga banget sama Kak Ros. Terima kasih sudah berjuang sampai sejauh ini. Semangat terus buat skripsinya!</p>
+  </section>
+</main>
+<script>
+const cv=document.getElementById("fx"),ctx=cv.getContext("2d"),btn=document.getElementById("btn");
+const reduce=matchMedia("(prefers-reduced-motion:reduce)").matches;
+let W,H;
+function size(){const d=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;ctx.setTransform(d,0,0,d,0,0)}
+size();addEventListener("resize",size);
+const pal=[["#ff8fab","#ffe0e8"],["#ffb703","#fff3c4"],["#c77dff","#f0e0ff"],["#ff6b6b","#ffd9d9"],["#f4a6ff","#fff0ff"]];
+const clamp=v=>Math.max(0,Math.min(1,v)),ease=t=>1-Math.pow(1-t,3);
+const back=t=>{const c=1.7;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2)};
+let flowers=[],petals=[],raf=null,t0=0;
+function petal(len,wid,c1,c2){
+  const g=ctx.createLinearGradient(0,0,0,-len);g.addColorStop(0,c2);g.addColorStop(1,c1);
+  ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(0,0);
+  ctx.bezierCurveTo(wid,-len*.3,wid*.8,-len,0,-len);
+  ctx.bezierCurveTo(-wid*.8,-len,-wid,-len*.3,0,0);ctx.fill();
+}
+function burst(x,y,n,up){
+  for(let i=0;i<n;i++){
+    const a=up?-Math.PI/2+(Math.random()-.5)*2.2:Math.random()*6.28,v=(up?6:2)+Math.random()*(up?9:4);
+    petals.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:Math.random()*6.28,vr:(Math.random()-.5)*.2,s:8+Math.random()*10,c:pal[i%pal.length],w:Math.random()*6.28});
+  }
+}
+function plant(){
+  flowers=[];const n=Math.max(5,Math.min(9,Math.round(W/110)));
+  for(let i=0;i<n;i++){
+    flowers.push({x:W*(0.05+0.9*(i+.1+Math.random()*.8)/n),top:H*(0.45+Math.random()*0.4),
+      delay:Math.random()*900,grow:900+Math.random()*500,r:24+Math.random()*24,n:5+Math.floor(Math.random()*4),
+      c:pal[i%pal.length],rot:Math.random()*6.28,sw:Math.random()*6.28,lean:(Math.random()-.5)*70,done:false});
+  }
+}
+function drawFlower(f,e){
+  const sp=ease(clamp((e-f.delay)/f.grow));if(sp<=0)return;
+  const sway=Math.sin(e/700+f.sw)*7*sp;
+  const ex=f.x+f.lean*sp+sway,ey=H-(H-f.top)*sp,cx=f.x+Math.sin(f.sw)*30*sp,cy=(H+ey)/2;
+  ctx.strokeStyle="#4f9d69";ctx.lineWidth=3;ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(f.x,H);ctx.quadraticCurveTo(cx,cy,ex,ey);ctx.stroke();
+  [.4,.62].forEach((t,k)=>{
+    if(sp<t)return;
+    const qx=(1-t)*(1-t)*f.x+2*(1-t)*t*cx+t*t*ex,qy=(1-t)*(1-t)*H+2*(1-t)*t*cy+t*t*ey;
+    ctx.save();ctx.translate(qx,qy);ctx.rotate((k?1:-1)*1.0);ctx.fillStyle="#5fb27a";
+    ctx.beginPath();ctx.ellipse(0,-12,6,14,0,0,6.28);ctx.fill();ctx.restore();
+  });
+  const b=clamp((e-f.delay-f.grow)/900);if(b<=0)return;
+  if(!f.done&&b>.5){f.done=true;burst(ex,ey,7,false)}
+  const s=Math.max(0,back(b));
+  ctx.save();ctx.translate(ex,ey);ctx.rotate(f.rot+b*.8+Math.sin(e/900+f.sw)*.08);
+  for(let layer=0;layer<2;layer++){
+    const k=layer?.62:1;ctx.save();if(layer)ctx.rotate(Math.PI/f.n);
+    for(let i=0;i<f.n;i++){ctx.rotate(6.2832/f.n);petal(f.r*k*s,f.r*.5*k*s,f.c[0],f.c[1])}
+    ctx.restore();
+  }
+  ctx.fillStyle="#ffcf4a";ctx.beginPath();ctx.arc(0,0,f.r*.2*s,0,6.28);ctx.fill();
+  ctx.restore();
+}
+function frame(now){
+  const e=now-t0;ctx.clearRect(0,0,W,H);
+  ctx.globalAlpha=e>8000?clamp(1-(e-8000)/1500):1;
+  flowers.forEach(f=>drawFlower(f,e));ctx.globalAlpha=1;
+  petals=petals.filter(p=>p.y<H+30&&e<14000);
+  petals.forEach(p=>{
+    p.vy+=.18;p.vx*=.992;p.vy*=.992;p.w+=.05;p.x+=p.vx+Math.sin(p.w)*.8;p.y+=p.vy*(p.vy>0?.55:1);p.r+=p.vr;
+    ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);petal(p.s,p.s*.45,p.c[0],p.c[1]);ctx.restore();
+  });
+  raf=(e<9600||petals.length)?requestAnimationFrame(frame):null;
+  if(!raf)ctx.clearRect(0,0,W,H);
+}
+btn.addEventListener("click",()=>{
+  document.getElementById("gift").classList.add("show");
+  if(reduce)return;
+  cancelAnimationFrame(raf);petals=[];plant();
+  const r=btn.getBoundingClientRect();burst(r.left+r.width/2,r.top,45,true);
+  t0=performance.now();raf=requestAnimationFrame(frame);
+});
+</script>
+</body>
+</html>
